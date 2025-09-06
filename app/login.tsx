@@ -57,7 +57,7 @@ const Login: React.FC = () => {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showMessage("Login Failed", "error");
+      showMessage("Please enter email and password", "error");
       return;
     }
 
@@ -67,7 +67,7 @@ const Login: React.FC = () => {
       showMessage("Login Successful", "success");
       setTimeout(() => router.push("/home"), 1000);
     } catch {
-      showMessage("Login Failed", "error");
+      showMessage("Login Failed: Invalid credentials", "error");
     } finally {
       setLoading(false);
     }
@@ -77,6 +77,28 @@ const Login: React.FC = () => {
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.container}>
+      {/* Top Alert (Absolutely Positioned) */}
+      {message && (
+        <Animated.View
+          style={[
+            styles.messageContainer,
+            {
+              backgroundColor:
+                message.type === "success"
+                  ? "rgba(72, 187, 120,0.25)"
+                  : "rgba(220,38,38,0.25)",
+              borderColor:
+                message.type === "success"
+                  ? "rgba(72, 187, 120,0.6)"
+                  : "rgba(220,38,38,0.6)",
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <Text style={styles.messageText}>{message.text}</Text>
+        </Animated.View>
+      )}
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -88,13 +110,9 @@ const Login: React.FC = () => {
             <Image source={require("../assets/images/logo.png")} style={styles.logo} />
           </Animated.View>
 
-          <Animated.Text style={[styles.appName, { opacity: fadeAppName }]}>
-            NOTEZY
-          </Animated.Text>
+          <Animated.Text style={[styles.appName, { opacity: fadeAppName }]}>NOTEZY</Animated.Text>
 
-          <Animated.Text style={[styles.title, { opacity: fadeTitle }]}>
-            Welcome Back
-          </Animated.Text>
+          <Animated.Text style={[styles.title, { opacity: fadeTitle }]}>Welcome Back</Animated.Text>
 
           {/* Inputs */}
           <Animated.View style={{ opacity: fadeInputs }}>
@@ -134,24 +152,6 @@ const Login: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </Animated.View>
-
-          {/* Messages */}
-          {message && (
-            <Animated.View
-              style={[
-                styles.messageContainer,
-                {
-                  backgroundColor:
-                    message.type === "success"
-                      ? "rgba(72, 187, 120,0.85)"
-                      : "rgba(220,38,38,0.85)",
-                  opacity: fadeAnim,
-                },
-              ]}
-            >
-              <Text style={styles.messageText}>{message.text}</Text>
-            </Animated.View>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -168,31 +168,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
-  logo: {
-    width: 100,
-    height: 100,
-    resizeMode: "contain",
-    opacity: 0.85,
-    marginBottom: 8,
-  },
-  appName: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#ffffffcc",
-    textAlign: "center",
-    marginBottom: 15,
-    top: -45,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "600",
-    marginBottom: 25,
-    textAlign: "center",
-    color: "#fff",
-    textShadowColor: "rgba(192, 192, 192, 0.5)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
+  logo: { width: 100, height: 100, resizeMode: "contain", opacity: 0.85, marginBottom: 8 },
+  appName: { fontSize: 22, fontWeight: "bold", color: "#ffffffcc", textAlign: "center", marginBottom: 15, top: -45 },
+  title: { fontSize: 26, fontWeight: "600", marginBottom: 25, textAlign: "center", color: "#fff" },
   mainText: { color: "#fff", fontSize: 16 },
   registerContainer: { flexDirection: "row", justifyContent: "center", marginTop: 15 },
   input: {
@@ -218,10 +196,15 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   registerText: { color: "#75c779ff", fontSize: 16, fontWeight: "bold" },
   messageContainer: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    right: 20,
     padding: 12,
-    borderRadius: 10,
-    marginTop: 15,
+    borderRadius: 15,
     alignItems: "center",
+    borderWidth: 1,
+    zIndex: 999,
   },
   messageText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });

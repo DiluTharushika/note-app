@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,6 +22,8 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // Animation values
   const fadeLogo = useRef(new Animated.Value(0)).current;
@@ -43,18 +44,29 @@ const Register = () => {
     ]).start();
   }, []);
 
+  const showMessage = (text: string, type: "success" | "error") => {
+    setMessage({ text, type });
+    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(() => {
+      setTimeout(() => {
+        Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() =>
+          setMessage(null)
+        );
+      }, 2000);
+    });
+  };
+
   const handleRegister = async () => {
     if (!email || !password) {
-      Alert.alert("Error", "Please enter email and password");
+      showMessage("Please enter email and password", "error");
       return;
     }
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      Alert.alert("Success", `Registered with ${userCredential.user.email}`);
-      router.push("/login");
+      showMessage(`Registered with ${userCredential.user.email}`, "success");
+      setTimeout(() => router.push("/login"), 1200);
     } catch (error: any) {
-      Alert.alert("Registration Error", error.message);
+      showMessage(error.message, "error");
     } finally {
       setLoading(false);
     }
@@ -64,6 +76,28 @@ const Register = () => {
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.container}>
+      {/* Top Alert */}
+      {message && (
+        <Animated.View
+          style={[
+            styles.messageContainer,
+            {
+              backgroundColor:
+                message.type === "success"
+                  ? "rgba(72, 187, 120,0.25)"
+                  : "rgba(220,38,38,0.25)",
+              borderColor:
+                message.type === "success"
+                  ? "rgba(72, 187, 120,0.6)"
+                  : "rgba(220,38,38,0.6)",
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <Text style={styles.messageText}>{message.text}</Text>
+        </Animated.View>
+      )}
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -76,14 +110,10 @@ const Register = () => {
           </Animated.View>
 
           {/* App Name */}
-          <Animated.Text style={[styles.appName, { opacity: fadeAppName }]}>
-            NOTEZY
-          </Animated.Text>
+          <Animated.Text style={[styles.appName, { opacity: fadeAppName }]}>NOTEZY</Animated.Text>
 
           {/* Title */}
-          <Animated.Text style={[styles.title, { opacity: fadeTitle }]}>
-            Create Your Account
-          </Animated.Text>
+          <Animated.Text style={[styles.title, { opacity: fadeTitle }]}>Create Your Account</Animated.Text>
 
           {/* Inputs */}
           <Animated.View style={{ opacity: fadeInputs }}>
@@ -134,21 +164,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 20, paddingVertical: 40 },
   logo: { width: 100, height: 100, resizeMode: "contain", opacity: 0.85 },
-  appName: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#ffffffcc",
-    textAlign: "center",
-    marginBottom: 20,
-    top: -36,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "600",
-    marginBottom: 25,
-    textAlign: "center",
-    color: "#fff",
-  },
+  appName: { fontSize: 22, fontWeight: "bold", color: "#ffffffcc", textAlign: "center", marginBottom: 20, top: -36 },
+  title: { fontSize: 26, fontWeight: "600", marginBottom: 25, textAlign: "center", color: "#fff" },
   input: {
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 12,
@@ -173,4 +190,16 @@ const styles = StyleSheet.create({
   registerText: { color: "#75c779ff", fontSize: 16, fontWeight: "bold" },
   mainText: { color: "#fff", fontSize: 16 },
   registerContainer: { flexDirection: "row", justifyContent: "center", marginTop: 15 },
+  messageContainer: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    right: 20,
+    padding: 12,
+    borderRadius: 15,
+    alignItems: "center",
+    borderWidth: 1,
+    zIndex: 999,
+  },
+  messageText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });

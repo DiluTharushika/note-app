@@ -1,15 +1,15 @@
 // app/addNote.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
@@ -19,17 +19,30 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 export default function AddNote() {
   const navigation = useNavigation();
   const [noteText, setNoteText] = useState("");
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const showMessage = (text: string, type: "success" | "error") => {
+    setMessage({ text, type });
+    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(() => {
+      setTimeout(() => {
+        Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() =>
+          setMessage(null)
+        );
+      }, 2000);
+    });
+  };
 
   const handleAddNote = async () => {
     if (!noteText.trim()) {
-      Alert.alert("Error", "Please enter a note.");
+      showMessage("Please enter a note.", "error");
       return;
     }
 
     try {
       const user = auth.currentUser;
       if (!user) {
-        Alert.alert("Error", "User not logged in.");
+        showMessage("User not logged in.", "error");
         return;
       }
 
@@ -40,11 +53,12 @@ export default function AddNote() {
       };
 
       await addDoc(collection(db, "notes"), noteData);
-      Alert.alert("Success", "Note added successfully!");
-      navigation.goBack();
+      showMessage("Note added successfully!", "success");
+      setNoteText(""); // clear input
+      setTimeout(() => navigation.goBack(), 1200);
     } catch (error) {
       console.error("Error adding note:", error);
-      Alert.alert("Error", "Failed to add note. Please try again.");
+      showMessage("Failed to add note. Please try again.", "error");
     }
   };
 
@@ -53,6 +67,28 @@ export default function AddNote() {
       colors={["#0f2027", "#203a43", "#2c5364"]}
       style={styles.container}
     >
+      {/* Top Alert */}
+      {message && (
+        <Animated.View
+          style={[
+            styles.messageContainer,
+            {
+              backgroundColor:
+                message.type === "success"
+                  ? "rgba(7, 124, 56, 1)"
+                  : "rgba(220, 38, 38, 1)",
+              borderColor:
+                message.type === "success"
+                  ? "rgba(72, 187, 120, 1)"
+                  : "rgba(220, 38, 38, 1)",
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <Text style={styles.messageText}>{message.text}</Text>
+        </Animated.View>
+      )}
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -102,11 +138,11 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 4,
-    paddingTop: 25, 
+    paddingTop: 25,
   },
   label: { color: "#fff", fontSize: 14, marginBottom: 5, marginLeft: 5 },
   input: {
-    backgroundColor: "rgba(255,255,255,0.15)", // glass effect
+    backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 12,
     paddingHorizontal: 15,
     paddingVertical: 12,
@@ -118,7 +154,7 @@ const styles = StyleSheet.create({
   },
   multilineInput: { height: 100, textAlignVertical: "top" },
   button: {
-    backgroundColor: "rgba(255, 255, 255, 0.55)", // glass-style button
+    backgroundColor: "rgba(255, 255, 255, 0.55)",
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: "center",
@@ -134,4 +170,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textDecorationLine: "underline",
   },
+  messageContainer: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    right: 20,
+    padding: 12,
+    borderRadius: 15,
+    alignItems: "center",
+    borderWidth: 1,
+    zIndex: 999,
+  },
+  messageText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });
