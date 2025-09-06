@@ -28,14 +28,12 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState<string>("User");
   const [searchText, setSearchText] = useState("");
 
-  // Animation refs
   const fadeWelcome = useRef(new Animated.Value(0)).current;
   const fadeSearch = useRef(new Animated.Value(0)).current;
   const fadeList = useRef(new Animated.Value(0)).current;
   const fadeAddButton = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Sequence animations smoothly
     Animated.sequence([
       Animated.timing(fadeWelcome, { toValue: 1, duration: 600, useNativeDriver: true }),
       Animated.timing(fadeSearch, { toValue: 1, duration: 600, useNativeDriver: true }),
@@ -47,12 +45,9 @@ export default function HomeScreen() {
   const fetchUser = async () => {
     const user = auth.currentUser;
     if (!user) return;
-
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        setUserName(userDoc.data().name || "User");
-      }
+      if (userDoc.exists()) setUserName(userDoc.data().name || "User");
     } catch (error) {
       console.error("Error fetching user:", error);
     }
@@ -64,7 +59,6 @@ export default function HomeScreen() {
 
     setLoading(true);
     const q = query(collection(db, "notes"), where("uid", "==", user.uid));
-
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -79,7 +73,6 @@ export default function HomeScreen() {
         setLoading(false);
       }
     );
-
     return unsubscribe;
   };
 
@@ -102,28 +95,37 @@ export default function HomeScreen() {
     }
   }, [searchText, notes]);
 
-  const renderItem = ({ item }: { item: any }) => (
-    <Animated.View
-      style={{
-        opacity: fadeList,
-        transform: [
-          { translateY: fadeList.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-        ],
-      }}
-    >
-      <TouchableOpacity
-        style={styles.noteCard}
-        onPress={() => router.push(`/noteDetail?id=${item.id}`)}
+  const renderItem = ({ item }: { item: any }) => {
+    const timestamp = item.createdAt?.toDate ? item.createdAt.toDate() : null;
+    const dateStr = timestamp ? timestamp.toLocaleDateString() : "Unknown";
+    const timeStr = timestamp ? timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+
+    return (
+      <Animated.View
+        style={{
+          opacity: fadeList,
+          transform: [
+            { translateY: fadeList.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+          ],
+        }}
       >
-        <Text style={styles.noteText}>{item.text}</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+        <TouchableOpacity
+          style={styles.noteCard}
+          onPress={() => router.push(`/noteDetail?id=${item.id}`)}
+        >
+          <Text style={styles.noteText}>{item.text}</Text>
+          <View style={styles.noteFooter}>
+            <Text style={styles.noteDate}>{dateStr}</Text>
+            <Text style={styles.noteTime}>{timeStr}</Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
 
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        {/* Welcome Text */}
         <Animated.Text
           style={[
             styles.welcomeText,
@@ -135,11 +137,9 @@ export default function HomeScreen() {
             },
           ]}
         >
-          Hello, {userName}!
+          Welcome Back,
         </Animated.Text>
-        <Text style={styles.subText}>Here are your notes</Text>
 
-        {/* Search Bar */}
         <Animated.View
           style={[
             styles.searchContainer,
@@ -161,7 +161,6 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
-        {/* Notes List + Add Button */}
         <View style={{ flex: 1 }}>
           {loading ? (
             <ActivityIndicator size="large" color="#fff" style={{ marginTop: 50 }} />
@@ -172,29 +171,29 @@ export default function HomeScreen() {
               data={filteredNotes}
               renderItem={renderItem}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingBottom: 120, marginTop: 10 }}
+              contentContainerStyle={{ paddingBottom: 200, marginTop: 10 }}
               showsVerticalScrollIndicator={false}
             />
           )}
-
-          {/* Add Button always bottom-right */}
-          <Animated.View
-            style={{
-              position: "absolute",
-              bottom: 50,
-              right: 25,
-              opacity: fadeAddButton,
-              transform: [{ scale: fadeAddButton }],
-            }}
-          >
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => router.push("/addNote")}
-            >
-              <Text style={styles.addButtonText}>+</Text>
-            </TouchableOpacity>
-          </Animated.View>
         </View>
+
+        {/* Fixed Add Button */}
+        <Animated.View
+          style={{
+            position: "absolute",
+            bottom: 40,
+            right: 25,
+            opacity: fadeAddButton,
+            transform: [{ scale: fadeAddButton }],
+          }}
+        >
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("/addNote")}
+          >
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -203,17 +202,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, paddingHorizontal: 20, paddingTop: 35 },
-  welcomeText: {
-    fontSize: width * 0.065,
-    fontWeight: "700",
-    color: "#ffffff",
-    marginBottom: 5,
-  },
-  subText: {
-    fontSize: width * 0.045,
-    color: "#ffffffcc",
-    marginBottom: 15,
-  },
+  welcomeText: { fontSize: width * 0.065, fontWeight: "700", color: "#fff", marginBottom: 5 },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -222,21 +211,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 15,
   },
-  searchInput: {
-    flex: 1,
-    height: 45,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    color: "#fff",
-  },
-  list: { paddingBottom: 140, marginTop: 10 },
+  searchInput: { flex: 1, height: 45, paddingHorizontal: 10, fontSize: 16, color: "#fff" },
   noteCard: {
     backgroundColor: "rgba(255,255,255,0.08)",
     padding: width * 0.05,
     borderRadius: 12,
     marginBottom: 12,
   },
-  noteText: { fontSize: width * 0.045, color: "#fff" },
+  noteText: { fontSize: width * 0.045, color: "#fff", marginBottom: 8 },
+  noteFooter: { flexDirection: "row", justifyContent: "space-between" },
+  noteDate: { fontSize: width * 0.035, color: "#ffffffaa" },
+  noteTime: { fontSize: width * 0.035, color: "#ffffffaa" },
   noNotesText: { textAlign: "center", marginTop: 50, color: "#fff" },
   addButton: {
     width: 70,
@@ -247,7 +232,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
-    top: -140,
+    top: -70,
   },
   addButtonText: { color: "#fff", fontSize: 40, fontWeight: "bold" },
 });
