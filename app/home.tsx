@@ -1,4 +1,3 @@
-// app/home.tsx
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
@@ -11,11 +10,13 @@ import {
   ActivityIndicator,
   TextInput,
   Animated,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
 import { auth, db } from "../firebaseConfig";
 import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import { Feather } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState<string>("User");
   const [searchText, setSearchText] = useState("");
+  const [signOutModalVisible, setSignOutModalVisible] = useState(false); // <-- new state
 
   const fadeWelcome = useRef(new Animated.Value(0)).current;
   const fadeSearch = useRef(new Animated.Value(0)).current;
@@ -95,10 +97,21 @@ export default function HomeScreen() {
     }
   }, [searchText, notes]);
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   const renderItem = ({ item }: { item: any }) => {
     const timestamp = item.createdAt?.toDate ? item.createdAt.toDate() : null;
     const dateStr = timestamp ? timestamp.toLocaleDateString() : "Unknown";
-    const timeStr = timestamp ? timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+    const timeStr = timestamp
+      ? timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "";
 
     return (
       <Animated.View
@@ -126,20 +139,28 @@ export default function HomeScreen() {
   return (
     <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <Animated.Text
-          style={[
-            styles.welcomeText,
-            {
-              opacity: fadeWelcome,
-              transform: [
-                { translateY: fadeWelcome.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
-              ],
-            },
-          ]}
-        >
-          Welcome Back,
-        </Animated.Text>
+        {/* Header with Welcome and SignOut */}
+        <View style={styles.headerRow}>
+          <Animated.Text
+            style={[
+              styles.welcomeText,
+              {
+                opacity: fadeWelcome,
+                transform: [
+                  { translateY: fadeWelcome.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+                ],
+              },
+            ]}
+          >
+            Welcome Back, {userName}
+          </Animated.Text>
 
+          <TouchableOpacity onPress={() => setSignOutModalVisible(true)} style={styles.signOutButton}>
+            <Feather name="log-out" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Bar */}
         <Animated.View
           style={[
             styles.searchContainer,
@@ -194,6 +215,35 @@ export default function HomeScreen() {
             <Text style={styles.addButtonText}>+</Text>
           </TouchableOpacity>
         </Animated.View>
+
+        {/* Custom Sign Out Modal */}
+        <Modal
+          transparent
+          visible={signOutModalVisible}
+          animationType="fade"
+          onRequestClose={() => setSignOutModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Confirm Sign Out</Text>
+              <Text style={styles.modalMessage}>Are you sure you want to sign out?</Text>
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: "#444" }]}
+                  onPress={() => setSignOutModalVisible(false)}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: "#ff4d4d" }]}
+                  onPress={handleSignOut}
+                >
+                  <Text style={styles.modalButtonText}>Sign Out</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -202,7 +252,23 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, paddingHorizontal: 20, paddingTop: 35 },
-  welcomeText: { fontSize: width * 0.065, fontWeight: "700", color: "#fff", marginBottom: 5 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  welcomeText: { fontSize: width * 0.055, fontWeight: "700", color: "#fff" },
+  signOutButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -227,12 +293,37 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
-    top: -70,
   },
   addButtonText: { color: "#fff", fontSize: 40, fontWeight: "bold" },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#203a43",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: { fontSize: 20, fontWeight: "700", color: "#fff", marginBottom: 10 },
+  modalMessage: { fontSize: 16, color: "#fff", marginBottom: 20, textAlign: "center" },
+  modalButtons: { flexDirection: "row", justifyContent: "space-between", width: "100%" },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 10,
+    marginHorizontal: 5,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalButtonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
 });

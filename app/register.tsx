@@ -63,8 +63,10 @@ const Register = () => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      showMessage(`Registered with ${userCredential.user.email}`, "success");
-      setTimeout(() => router.push("/login"), 1200);
+      showMessage(`Welcome, ${userCredential.user.email}`, "success");
+
+      // ✅ Go directly to Home screen
+      setTimeout(() => router.replace("/home"), 1200);
     } catch (error: any) {
       showMessage(error.message, "error");
     } finally {
