@@ -152,7 +152,7 @@ export default function HomeScreen() {
               },
             ]}
           >
-            Welcome Back, {userName}
+            Welcome Back, 
           </Animated.Text>
 
           <TouchableOpacity onPress={() => setSignOutModalVisible(true)} style={styles.signOutButton}>
@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
+    top: -80,
   },
   addButtonText: { color: "#fff", fontSize: 40, fontWeight: "bold" },
 
