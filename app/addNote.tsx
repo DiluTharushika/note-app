@@ -54,7 +54,7 @@ export default function AddNote() {
       style={styles.container}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView
@@ -90,7 +90,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 30,
   },
@@ -103,6 +102,7 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 4,
+    paddingTop: 25, 
   },
   label: { color: "#fff", fontSize: 14, marginBottom: 5, marginLeft: 5 },
   input: {
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   multilineInput: { height: 100, textAlignVertical: "top" },
   button: {
-    backgroundColor: "rgba(255,255,255,0.25)", // glass-style button
+    backgroundColor: "rgba(255, 255, 255, 0.55)", // glass-style button
     paddingVertical: 15,
     borderRadius: 12,
     alignItems: "center",

@@ -1,5 +1,5 @@
 // app/noteDetail.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -18,10 +19,20 @@ import { db } from "../firebaseConfig";
 export default function NoteDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-
   const [note, setNote] = useState<any>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editedText, setEditedText] = useState("");
+
+  // Animation refs
+  const fadeCard = useRef(new Animated.Value(0)).current;
+  const fadeActions = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.stagger(200, [
+      Animated.timing(fadeCard, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(fadeActions, { toValue: 1, friction: 6, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   // Fetch note details
   useEffect(() => {
@@ -40,7 +51,6 @@ export default function NoteDetailScreen() {
         Alert.alert("Error", "Failed to fetch note details");
       }
     };
-
     if (id) fetchNote();
   }, [id]);
 
@@ -70,7 +80,6 @@ export default function NoteDetailScreen() {
       Alert.alert("Error", "Note cannot be empty");
       return;
     }
-
     try {
       await updateDoc(doc(db, "notes", id!), { text: editedText });
       setNote({ ...note, text: editedText });
@@ -98,34 +107,50 @@ export default function NoteDetailScreen() {
       colors={["#0f2027", "#203a43", "#2c5364"]}
       style={styles.container}
     >
-      <Text style={styles.header}>Note Detail</Text>
+      <Animated.View
+        style={{
+          opacity: fadeCard,
+          transform: [
+            { translateY: fadeCard.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+          ],
+        }}
+      >
+        <Text style={styles.header}>Note Detail</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Note:</Text>
-        <Text style={styles.description}>{note.text}</Text>
+        <View style={styles.card}>
+          <Text style={styles.label}>Note</Text>
+          <Text style={styles.description}>{note.text}</Text>
 
-        <Text style={styles.label}>Created:</Text>
-        <Text style={styles.description}>
-          {note.createdAt?.toDate
-            ? note.createdAt.toDate().toLocaleString()
-            : "Unknown"}
-        </Text>
-      </View>
+          <Text style={styles.label}>Created</Text>
+          <Text style={styles.description}>
+            {note.createdAt?.toDate
+              ? note.createdAt.toDate().toLocaleString()
+              : "Unknown"}
+          </Text>
+        </View>
+      </Animated.View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          onPress={() => {
-            setEditedText(note.text);
-            setEditModalVisible(true);
-          }}
-          style={styles.iconButton}
-        >
-          <Feather name="edit" size={28} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleDelete} style={styles.iconButton}>
-          <Feather name="trash-2" size={28} color="#F87171" />
-        </TouchableOpacity>
-      </View>
+      <Animated.View
+        style={{
+          opacity: fadeActions,
+          transform: [{ scale: fadeActions }],
+        }}
+      >
+        <View style={styles.actions}>
+          <TouchableOpacity
+            onPress={() => {
+              setEditedText(note.text);
+              setEditModalVisible(true);
+            }}
+            style={styles.iconButton}
+          >
+            <Feather name="edit" size={28} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDelete} style={styles.iconButton}>
+            <Feather name="trash-2" size={28} color="#F87171" />
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
 
       {/* Edit Modal */}
       <Modal
@@ -142,7 +167,8 @@ export default function NoteDetailScreen() {
               value={editedText}
               onChangeText={setEditedText}
               placeholder="Edit your note"
-              placeholderTextColor="rgba(0,0,0,0.4)"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+              multiline
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalButton} onPress={handleEdit}>
@@ -165,17 +191,17 @@ export default function NoteDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   header: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#fff",
     marginBottom: 20,
     textAlign: "center",
+    paddingTop: 20,
   },
   card: {
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 15,
-    padding: 20,
-    marginTop: 20,
+    padding: 25,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
@@ -183,9 +209,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     color: "#fff",
-    marginTop: 10,
+    marginTop: 15,
   },
-  description: { marginTop: 5, fontSize: 14, color: "#fff" },
+  description: {
+    marginTop: 8,
+    fontSize: 16,
+    color: "#fff",
+    lineHeight: 22,
+  },
   actions: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -207,7 +238,7 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: "rgba(1, 44, 16, 0.97)",
     borderRadius: 15,
-    padding: 39,
+    padding: 30,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.3)",
   },
@@ -221,24 +252,25 @@ const styles = StyleSheet.create({
   input: {
     borderColor: "rgba(255,255,255,0.3)",
     borderWidth: 1,
-    borderRadius: 10,
-    height: 50,
+    borderRadius: 12,
+    minHeight: 60,
     paddingHorizontal: 15,
-    marginBottom: 15,
+    paddingVertical: 10,
     fontSize: 16,
     color: "#fff",
     backgroundColor: "rgba(255,255,255,0.15)",
+    textAlignVertical: "top",
   },
   modalButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
+    marginTop: 15,
   },
   modalButton: {
     flex: 1,
     backgroundColor: "rgba(159, 165, 164, 0.44)",
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     marginHorizontal: 5,
   },

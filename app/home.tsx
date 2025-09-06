@@ -1,5 +1,5 @@
 // app/home.tsx
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Dimensions,
   ActivityIndicator,
   TextInput,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -24,8 +25,24 @@ export default function HomeScreen() {
   const [notes, setNotes] = useState<any[]>([]);
   const [filteredNotes, setFilteredNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState<string>("");
+  const [userName, setUserName] = useState<string>("User");
   const [searchText, setSearchText] = useState("");
+
+  // Animation refs
+  const fadeWelcome = useRef(new Animated.Value(0)).current;
+  const fadeSearch = useRef(new Animated.Value(0)).current;
+  const fadeList = useRef(new Animated.Value(0)).current;
+  const fadeAddButton = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Sequence animations smoothly
+    Animated.sequence([
+      Animated.timing(fadeWelcome, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(fadeSearch, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.timing(fadeList, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(fadeAddButton, { toValue: 1, friction: 6, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const fetchUser = async () => {
     const user = auth.currentUser;
@@ -46,16 +63,13 @@ export default function HomeScreen() {
     if (!user) return;
 
     setLoading(true);
-
     const q = query(collection(db, "notes"), where("uid", "==", user.uid));
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const notesList: any[] = [];
-        snapshot.forEach((doc) => {
-          notesList.push({ id: doc.id, ...doc.data() });
-        });
+        snapshot.forEach((doc) => notesList.push({ id: doc.id, ...doc.data() }));
         setNotes(notesList);
         setFilteredNotes(notesList);
         setLoading(false);
@@ -89,26 +103,54 @@ export default function HomeScreen() {
   }, [searchText, notes]);
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={styles.noteCard}
-      onPress={() => router.push(`/noteDetail?id=${item.id}`)}
+    <Animated.View
+      style={{
+        opacity: fadeList,
+        transform: [
+          { translateY: fadeList.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+        ],
+      }}
     >
-      <Text style={styles.noteText}>{item.text}</Text>
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.noteCard}
+        onPress={() => router.push(`/noteDetail?id=${item.id}`)}
+      >
+        <Text style={styles.noteText}>{item.text}</Text>
+      </TouchableOpacity>
+    </Animated.View>
   );
 
   return (
-    <LinearGradient
-      colors={["#0f2027", "#203a43", "#2c5364"]}
-      style={styles.container}
-    >
+    <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <Text style={styles.welcomeText}>
-          Welcome {userName || "to NOTEZY"}!
-        </Text>
+        {/* Welcome Text */}
+        <Animated.Text
+          style={[
+            styles.welcomeText,
+            {
+              opacity: fadeWelcome,
+              transform: [
+                { translateY: fadeWelcome.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+              ],
+            },
+          ]}
+        >
+          Hello, {userName}!
+        </Animated.Text>
+        <Text style={styles.subText}>Here are your notes</Text>
 
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
+        <Animated.View
+          style={[
+            styles.searchContainer,
+            {
+              opacity: fadeSearch,
+              transform: [
+                { translateY: fadeSearch.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) },
+              ],
+            },
+          ]}
+        >
           <Feather name="search" size={20} color="#fff" style={{ marginLeft: 10 }} />
           <TextInput
             style={styles.searchInput}
@@ -117,31 +159,42 @@ export default function HomeScreen() {
             value={searchText}
             onChangeText={setSearchText}
           />
+        </Animated.View>
+
+        {/* Notes List + Add Button */}
+        <View style={{ flex: 1 }}>
+          {loading ? (
+            <ActivityIndicator size="large" color="#fff" style={{ marginTop: 50 }} />
+          ) : filteredNotes.length === 0 ? (
+            <Text style={styles.noNotesText}>No notes found.</Text>
+          ) : (
+            <FlatList
+              data={filteredNotes}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingBottom: 120, marginTop: 10 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+
+          {/* Add Button always bottom-right */}
+          <Animated.View
+            style={{
+              position: "absolute",
+              bottom: 50,
+              right: 25,
+              opacity: fadeAddButton,
+              transform: [{ scale: fadeAddButton }],
+            }}
+          >
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push("/addNote")}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#fff" style={{ marginTop: 50 }} />
-        ) : filteredNotes.length === 0 ? (
-          <Text style={{ textAlign: "center", marginTop: 50, color: "#fff" }}>
-            No notes found.
-          </Text>
-        ) : (
-          <FlatList
-            data={filteredNotes}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-
-        {/* Add Button */}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push("/addNote")}
-        >
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -150,14 +203,17 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, paddingHorizontal: 20, paddingTop: 35 },
-
   welcomeText: {
-    fontSize: width * 0.055,
+    fontSize: width * 0.065,
     fontWeight: "700",
-    color: "#fff",
+    color: "#ffffff",
+    marginBottom: 5,
+  },
+  subText: {
+    fontSize: width * 0.045,
+    color: "#ffffffcc",
     marginBottom: 15,
   },
-
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -166,7 +222,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 15,
   },
-
   searchInput: {
     flex: 1,
     height: 45,
@@ -174,38 +229,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
   },
-
   list: { paddingBottom: 140, marginTop: 10 },
-
   noteCard: {
     backgroundColor: "rgba(255,255,255,0.08)",
     padding: width * 0.05,
     borderRadius: 12,
     marginBottom: 12,
   },
-  noteText: {
-    fontSize: width * 0.045,
-    color: "#fff",
+  noteText: { fontSize: width * 0.045, color: "#fff" },
+  noNotesText: { textAlign: "center", marginTop: 50, color: "#fff" },
+  addButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    top: -140,
   },
-
-  // Replace addButton styles with this
-addButton: {
-  position: "absolute",
-  bottom: 120,
-  right: 30,
-  width: 70,
-  height: 70,
-  borderRadius: 35,
-  backgroundColor: "rgba(255,255,255,0.15)", // semi-transparent to match background
-  justifyContent: "center",
-  alignItems: "center",
-  borderWidth: 1,
-  borderColor: "rgba(255,255,255,0.2)", // subtle border
-},
-addButtonText: {
-  color: "#fff",
-  fontSize: 40,
-  fontWeight: "bold",
-},
-
+  addButtonText: { color: "#fff", fontSize: 40, fontWeight: "bold" },
 });

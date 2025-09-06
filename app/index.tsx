@@ -21,25 +21,40 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <LinearGradient colors={["#0f2027", "#203a43", "#2c5364"]} style={styles.container}>
-      <Animated.Image
-        source={require("../assets/images/logo.png")}
-        style={[styles.image, { opacity: fadeAnim }]}
-      />
-      <Text style={styles.appName}>NOTEZY</Text>
+    <LinearGradient
+      colors={["#0f2027", "#203a43", "#2c5364"]}
+      style={styles.container}
+    >
+      <View style={styles.logoContainer}>
+        <Animated.Image
+          source={require("../assets/images/logo.png")}
+          style={[styles.image, { opacity: fadeAnim }]}
+        />
+        <Text style={styles.appName}>NOTEZY</Text>
+      </View>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  image: { width: 150, height: 150, resizeMode: "contain", marginBottom: 20 },
+  logoContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  image: {
+    width: 100,
+    height: 180,
+    resizeMode: "contain",
+    top: -40,
+  },
   appName: {
-    fontSize: 32,
+    position: "absolute",
+    fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
-    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
 });
